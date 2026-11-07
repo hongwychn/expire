@@ -1,0 +1,1023 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>到期提醒</title>
+<meta name="description" content="记录每样东西什么时候到期">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="到期提醒">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#f2f2f7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+<meta name="format-detection" content="telephone=no">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="manifest" href="manifest.webmanifest">
+<style>
+:root {
+  color-scheme: light dark;
+  --bg: #f2f2f7;
+  --card: #fff;
+  --sheet: #f2f2f7;
+  --group: #fff;
+  --seg-on: #fff;
+  --text: #000;
+  --text2: rgba(60, 60, 67, .6);
+  --text3: rgba(60, 60, 67, .3);
+  --sep: rgba(60, 60, 67, .2);
+  --fill: rgba(120, 120, 128, .12);
+  --accent: #007aff;
+  --red: #ff3b30;
+  --orange: #ff9500;
+  --green: #34c759;
+  --gray: #8e8e93;
+  --red-t: #d70015;
+  --orange-t: #c93400;
+  --green-t: #248a3d;
+  --red-bg: rgba(255, 59, 48, .12);
+  --orange-bg: rgba(255, 149, 0, .15);
+  --green-bg: rgba(52, 199, 89, .14);
+  --gray-bg: rgba(142, 142, 147, .14);
+  --accent-bg: rgba(0, 122, 255, .1);
+  --shadow: 0 1px 3px rgba(0, 0, 0, .06);
+  --toast: rgba(28, 28, 30, .94);
+  --sat: env(safe-area-inset-top, 0px);
+  --sab: env(safe-area-inset-bottom, 0px);
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #000;
+    --card: #1c1c1e;
+    --sheet: #1c1c1e;
+    --group: #2c2c2e;
+    --seg-on: #636366;
+    --text: #fff;
+    --text2: rgba(235, 235, 245, .6);
+    --text3: rgba(235, 235, 245, .3);
+    --sep: rgba(84, 84, 88, .6);
+    --fill: rgba(118, 118, 128, .24);
+    --accent: #0a84ff;
+    --red: #ff453a;
+    --orange: #ff9f0a;
+    --green: #30d158;
+    --red-t: #ff6961;
+    --orange-t: #ffb340;
+    --green-t: #30db5b;
+    --red-bg: rgba(255, 69, 58, .2);
+    --orange-bg: rgba(255, 159, 10, .2);
+    --green-bg: rgba(48, 209, 88, .17);
+    --gray-bg: rgba(142, 142, 147, .22);
+    --accent-bg: rgba(10, 132, 255, .2);
+    --shadow: 0 0 transparent;
+    --toast: rgba(58, 58, 60, .96);
+  }
+}
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+html.locked, html.locked body { overflow: hidden; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 17px/1.35 -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", "Noto Sans CJK SC", "Microsoft YaHei", sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+button { font: inherit; color: inherit; background: none; border: 0; margin: 0; padding: 0; cursor: pointer; touch-action: manipulation; -webkit-user-select: none; user-select: none; }
+input, select, textarea { font: inherit; color: inherit; margin: 0; }
+[hidden] { display: none !important; }
+.vh { position: absolute; width: 1px; height: 1px; opacity: 0; overflow: hidden; pointer-events: none; }
+
+/* ---------- main page ---------- */
+.wrap { max-width: 640px; margin: 0 auto; padding: calc(var(--sat) + 14px) 16px calc(var(--sab) + 112px); }
+.top { display: flex; align-items: flex-end; justify-content: space-between; margin: 0 4px 16px; }
+.top .date { font-size: 13px; font-weight: 600; color: var(--text2); }
+.top h1 { margin: 2px 0 0; font-size: 34px; line-height: 1.2; font-weight: 700; }
+.icon-btn { width: 38px; height: 38px; margin-bottom: 4px; border-radius: 50%; display: grid; place-items: center; background: var(--card); color: var(--accent); box-shadow: var(--shadow); }
+.icon-btn svg { width: 21px; height: 21px; }
+
+.tip { display: flex; gap: 10px; align-items: flex-start; margin-bottom: 14px; padding: 12px 14px; border-radius: 14px; background: var(--card); box-shadow: var(--shadow); font-size: 14px; line-height: 1.55; color: var(--text2); }
+.tip b { color: var(--text); }
+.tip button { flex: none; padding: 2px 0 2px 4px; color: var(--accent); font-size: 14px; font-weight: 600; }
+
+.stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 12px; }
+.stat { padding: 10px 4px 9px; border-radius: 14px; background: var(--card); box-shadow: var(--shadow); text-align: center; transition: transform .12s; }
+.stat:active { transform: scale(.96); }
+.stat.on { box-shadow: inset 0 0 0 2px var(--accent), var(--shadow); }
+.stat b { display: block; font-size: 26px; line-height: 1.15; font-weight: 700; font-variant-numeric: tabular-nums; }
+.stat span { display: block; margin-top: 1px; font-size: 12px; color: var(--text2); }
+.c-red { color: var(--red); }
+.c-orange { color: var(--orange); }
+.c-gray { color: var(--gray); }
+
+.search { position: relative; display: block; margin-bottom: 10px; }
+.search svg { position: absolute; left: 10px; top: 50%; width: 17px; height: 17px; transform: translateY(-50%); color: var(--text2); pointer-events: none; }
+.search input { width: 100%; height: 38px; padding: 0 12px 0 34px; border: 0; border-radius: 11px; outline: none; background: var(--fill); -webkit-appearance: none; appearance: none; }
+.search input::placeholder { color: var(--text2); }
+.search input::-webkit-search-decoration { -webkit-appearance: none; }
+
+.chips { display: flex; gap: 8px; margin: 0 -16px; padding: 2px 16px 6px; overflow-x: auto; scrollbar-width: none; }
+.chips::-webkit-scrollbar { display: none; }
+.chip { flex: none; height: 32px; padding: 0 13px; border-radius: 16px; background: var(--card); box-shadow: var(--shadow); font-size: 15px; white-space: nowrap; }
+.chip.on { background: var(--accent); color: #fff; }
+
+.sec-h { display: flex; justify-content: space-between; margin: 20px 16px 7px; font-size: 13px; font-weight: 400; color: var(--text2); }
+.sh-expired span:first-child { color: var(--red); font-weight: 600; }
+.sh-soon span:first-child { color: var(--orange); font-weight: 600; }
+.card { overflow: hidden; border-radius: 14px; background: var(--card); box-shadow: var(--shadow); }
+.item { position: relative; display: flex; align-items: center; gap: 12px; width: 100%; padding: 11px 14px 11px 12px; text-align: left; -webkit-touch-callout: none; }
+.item + .item::before { content: ""; position: absolute; top: 0; left: 64px; right: 0; border-top: .5px solid var(--sep); }
+.item:active, .actions button:active { background: var(--fill); }
+.ico { flex: none; width: 40px; height: 40px; border-radius: 11px; display: grid; place-items: center; font-size: 22px; background: rgba(var(--t), .16); }
+.main { flex: 1; min-width: 0; }
+.name { display: block; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.qty { margin-left: 5px; font-size: 14px; font-weight: 400; color: var(--text2); }
+.meta { display: block; margin-top: 1px; font-size: 13px; color: var(--text2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bar { display: block; height: 3px; margin-top: 7px; overflow: hidden; border-radius: 2px; background: var(--fill); }
+.bar i { display: block; height: 100%; border-radius: 2px; background: currentColor; }
+.pill { flex: none; padding: 4px 9px; border-radius: 10px; font-size: 13px; font-weight: 600; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.st-expired .pill { color: var(--red-t); background: var(--red-bg); }
+.st-soon .pill { color: var(--orange-t); background: var(--orange-bg); }
+.st-ok .pill { color: var(--green-t); background: var(--green-bg); }
+.st-done .pill { color: var(--gray); background: var(--gray-bg); }
+.st-expired .bar { color: var(--red); }
+.st-soon .bar { color: var(--orange); }
+.st-ok .bar { color: var(--green); }
+.st-done .name { color: var(--text2); }
+.st-done .ico { filter: grayscale(1); opacity: .6; }
+
+.empty { padding: 56px 24px; text-align: center; color: var(--text2); line-height: 1.6; }
+.empty.small { padding: 40px 24px; }
+.empty .big { font-size: 60px; line-height: 1; }
+.empty h3 { margin: 16px 0 6px; font-size: 20px; color: var(--text); }
+.empty p { margin: 0; font-size: 15px; }
+.empty button { margin-top: 22px; padding: 10px 20px; border-radius: 20px; background: var(--accent-bg); color: var(--accent); font-size: 15px; font-weight: 600; }
+
+.fab { position: fixed; z-index: 10; right: max(20px, calc(50% - 300px)); bottom: calc(var(--sab) + 22px); width: 58px; height: 58px; border-radius: 50%; display: grid; place-items: center; background: var(--accent); color: #fff; box-shadow: 0 6px 20px rgba(0, 122, 255, .4); transition: transform .15s; }
+.fab:active { transform: scale(.9); }
+.fab svg { width: 28px; height: 28px; }
+
+/* ---------- sheets ---------- */
+.backdrop { position: fixed; inset: 0; z-index: 20; background: rgba(0, 0, 0, .4); opacity: 0; pointer-events: none; transition: opacity .3s; }
+.backdrop.show { opacity: 1; pointer-events: auto; }
+.sheet { position: fixed; z-index: 21; left: 0; right: 0; bottom: 0; top: calc(var(--sat) + 12px); max-width: 640px; margin: 0 auto; display: flex; flex-direction: column; border-radius: 14px 14px 0 0; background: var(--sheet); transform: translateY(102%); visibility: hidden; transition: transform .38s cubic-bezier(.32, .72, 0, 1), visibility 0s .38s; }
+.sheet.show { transform: none; visibility: visible; transition: transform .38s cubic-bezier(.32, .72, 0, 1); }
+.sheet-head { flex: none; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; height: 56px; padding: 0 16px; }
+.sheet-head h2 { margin: 0; font-size: 17px; font-weight: 600; }
+.sheet-head .l { justify-self: start; }
+.sheet-head .r { justify-self: end; }
+.link { padding: 8px 0; color: var(--accent); font-size: 17px; }
+.link.strong { font-weight: 600; }
+.sheet-body { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; padding: 6px 16px calc(var(--sab) + 40px); }
+
+.glabel { margin: 0 16px 7px; font-size: 13px; color: var(--text2); }
+.group { margin-bottom: 24px; overflow: hidden; border-radius: 12px; background: var(--group); }
+.group + .foot { margin-top: -16px; }
+.foot { margin: 0 16px 24px; font-size: 13px; line-height: 1.5; color: var(--text2); }
+.foot.center { text-align: center; }
+.row { position: relative; display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 50px; padding: 7px 16px; }
+.row.sep::before, .actions > * + *::before, .about > * + *::before { content: ""; position: absolute; top: 0; left: 16px; right: 0; border-top: .5px solid var(--sep); }
+.lbl { flex: none; }
+.lbl small { display: block; font-size: 13px; color: var(--text2); }
+.lbl small.c-red { color: var(--red); }
+.lbl small.c-orange { color: var(--orange); }
+.txt { display: block; width: 100%; padding: 14px 16px; border: 0; outline: none; background: none; }
+textarea.txt { min-height: 92px; resize: none; line-height: 1.45; }
+.txt::placeholder, .rt::placeholder { color: var(--text3); }
+.rt { flex: 1; min-width: 0; padding: 6px 0; border: 0; outline: none; background: none; text-align: right; }
+.pick { min-height: 34px; padding: 5px 28px 5px 11px; border: 0; border-radius: 8px; outline: none; -webkit-appearance: none; appearance: none;
+  background: var(--fill) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 16'%3E%3Cpath d='M1.5 6 5 2.5 8.5 6M1.5 10 5 13.5 8.5 10' fill='none' stroke='%238e8e93' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat right 10px center / 9px 14px; }
+input[type="date"].pick { min-width: 9.6em; padding: 5px 11px; background-image: none; text-align: center; }
+.pick::-webkit-date-and-time-value { margin: 0; text-align: center; }
+.date-field { position: relative; display: inline-block; }
+.date-field .ph { position: absolute; inset: 0; display: grid; place-items: center; color: var(--text3); pointer-events: none; }
+.date-field.has .ph, .date-field input:focus + .ph { display: none; }
+.date-field:not(.has) input:not(:focus) { color: transparent; }
+.inline { display: flex; align-items: center; gap: 8px; }
+.num { width: 4.6em; min-height: 34px; padding: 5px 8px; border: 0; border-radius: 8px; outline: none; background: var(--fill); text-align: center; -moz-appearance: textfield; appearance: textfield; }
+.num::-webkit-inner-spin-button, .num::-webkit-outer-spin-button,
+.stepper input::-webkit-inner-spin-button, .stepper input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+.stepper { display: flex; align-items: center; border-radius: 8px; background: var(--fill); }
+.stepper button { width: 40px; height: 34px; color: var(--accent); font-size: 22px; line-height: 1; }
+.stepper input { width: 3.2em; border: 0; outline: none; background: none; text-align: center; -moz-appearance: textfield; appearance: textfield; }
+.calc { font-weight: 600; }
+.quick { display: flex; flex-wrap: wrap; gap: 7px; padding: 0 16px 13px; }
+.quick button { padding: 5px 11px; border-radius: 14px; background: var(--fill); color: var(--accent); font-size: 14px; }
+.quick button.on { background: var(--accent); color: #fff; }
+.seg { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 2px; margin: 12px 12px; padding: 2px; border-radius: 9px; background: var(--fill); }
+.seg button { height: 32px; border-radius: 7px; font-size: 14px; font-weight: 500; }
+.seg button.on { background: var(--seg-on); box-shadow: 0 2px 6px rgba(0, 0, 0, .12); font-weight: 600; }
+.cat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 24px; }
+.cat-opt { padding: 10px 2px 9px; border-radius: 12px; background: var(--group); font-size: 13px; text-align: center; white-space: nowrap; }
+.cat-opt .e { display: block; margin-bottom: 3px; font-size: 24px; line-height: 1.2; }
+.cat-opt.on { background: var(--accent-bg); box-shadow: inset 0 0 0 2px var(--accent); color: var(--accent); font-weight: 600; }
+.actions button { position: relative; display: block; width: 100%; min-height: 50px; padding: 13px 16px; color: var(--accent); text-align: center; }
+.actions .danger { color: var(--red); }
+.about p { position: relative; margin: 0; padding: 13px 16px; font-size: 15px; line-height: 1.55; }
+
+.toast { position: fixed; z-index: 50; left: 50%; bottom: calc(var(--sab) + 96px); display: flex; align-items: center; gap: 16px; max-width: calc(100% - 32px); padding: 12px 18px; border-radius: 14px; background: var(--toast); color: #fff; font-size: 15px; box-shadow: 0 8px 24px rgba(0, 0, 0, .2); opacity: 0; pointer-events: none; transform: translate(-50%, 16px); transition: opacity .2s, transform .2s; }
+.toast.show { opacity: 1; pointer-events: auto; transform: translate(-50%, 0); }
+.toast button { flex: none; color: #64d2ff; font-size: 15px; font-weight: 600; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div>
+      <div class="date" id="today"></div>
+      <h1>到期提醒</h1>
+    </div>
+    <button type="button" class="icon-btn" id="btnSettings" aria-label="设置">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+    </button>
+  </header>
+
+  <div class="tip" id="tip" hidden>
+    <div id="tipText"></div>
+    <button type="button" id="tipClose">知道了</button>
+  </div>
+
+  <div id="dash">
+    <div class="stats">
+      <button type="button" class="stat" data-f="expired"><b class="c-red">0</b><span>已过期</span></button>
+      <button type="button" class="stat" data-f="soon"><b class="c-orange">0</b><span>即将到期</span></button>
+      <button type="button" class="stat" data-f="all"><b>0</b><span>全部</span></button>
+      <button type="button" class="stat" data-f="done"><b class="c-gray">0</b><span>已用完</span></button>
+    </div>
+    <label class="search">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <input id="q" type="search" placeholder="搜索名称、位置、备注" enterkeyhint="search" autocomplete="off">
+    </label>
+    <div class="chips" id="chips"></div>
+  </div>
+
+  <main id="list"></main>
+</div>
+
+<button type="button" class="fab" id="fab" aria-label="添加">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+</button>
+
+<div class="backdrop" id="backdrop"></div>
+
+<section class="sheet" id="editSheet" role="dialog" aria-modal="true" aria-labelledby="editTitle">
+  <div class="sheet-head">
+    <button type="button" class="link l" data-close>取消</button>
+    <h2 id="editTitle">添加物品</h2>
+    <button type="button" class="link strong r" id="btnSave">保存</button>
+  </div>
+  <div class="sheet-body">
+    <div class="group">
+      <input class="txt" id="fName" placeholder="名称，如：牛奶、护照、视频会员" maxlength="40" autocomplete="off" enterkeyhint="done">
+    </div>
+
+    <div class="glabel">分类</div>
+    <div class="cat-grid" id="fCats"></div>
+
+    <div class="glabel">到期时间</div>
+    <div class="group">
+      <div class="seg" id="fMode">
+        <button type="button" data-mode="date">直接填到期日</button>
+        <button type="button" data-mode="shelf">生产日期 + 保质期</button>
+      </div>
+      <div id="modeDate">
+        <div class="row sep">
+          <span class="lbl">到期日期<small id="relDate"></small></span>
+          <span class="date-field"><input type="date" class="pick" id="fExpiry"><span class="ph">选择日期</span></span>
+        </div>
+        <div class="quick" id="quick"></div>
+      </div>
+      <div id="modeShelf" hidden>
+        <div class="row sep">
+          <span class="lbl">生产日期</span>
+          <span class="date-field"><input type="date" class="pick" id="fMfg"><span class="ph">选择日期</span></span>
+        </div>
+        <div class="row sep">
+          <span class="lbl">保质期</span>
+          <span class="inline">
+            <input type="number" class="num" id="fShelfNum" inputmode="numeric" min="1" max="9999" placeholder="数字">
+            <select class="pick" id="fShelfUnit"><option value="d">天</option><option value="m">个月</option><option value="y">年</option></select>
+          </span>
+        </div>
+        <div class="row sep">
+          <span class="lbl">到期日期<small id="relShelf"></small></span>
+          <span class="calc" id="calcExpiry">—</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="group">
+      <div class="row">
+        <span class="lbl">提醒</span>
+        <select class="pick" id="fRemind"></select>
+      </div>
+      <div class="row sep">
+        <span class="lbl">数量</span>
+        <span class="stepper">
+          <button type="button" data-step="-1" aria-label="减少">−</button>
+          <input type="number" id="fQty" inputmode="numeric" min="0" max="9999">
+          <button type="button" data-step="1" aria-label="增加">+</button>
+        </span>
+      </div>
+      <div class="row sep">
+        <span class="lbl">位置</span>
+        <input class="rt" id="fLoc" placeholder="可选，如：冰箱" maxlength="20" autocomplete="off" enterkeyhint="done">
+      </div>
+      <div class="quick" id="locChips"></div>
+    </div>
+
+    <div class="group">
+      <textarea class="txt" id="fNote" rows="3" maxlength="500" placeholder="备注（可选）"></textarea>
+    </div>
+
+    <div class="group actions" id="editActions">
+      <button type="button" id="btnCal">添加到 iPhone 日历提醒</button>
+      <button type="button" id="btnDup">再记一份（复制）</button>
+      <button type="button" id="btnDone">标记为已用完</button>
+      <button type="button" class="danger" id="btnDel">删除</button>
+    </div>
+  </div>
+</section>
+
+<section class="sheet" id="setSheet" role="dialog" aria-modal="true" aria-labelledby="setTitle">
+  <div class="sheet-head">
+    <span></span>
+    <h2 id="setTitle">设置</h2>
+    <button type="button" class="link strong r" data-close>完成</button>
+  </div>
+  <div class="sheet-body">
+    <div class="glabel">系统提醒</div>
+    <div class="group actions">
+      <button type="button" id="btnCalAll">把所有未到期的物品导出到日历</button>
+    </div>
+    <p class="foot">网页 App 不能在后台推送通知。导出到 iPhone 自带的「日历」后，系统会在你设置的提醒日（上午 9:00）和到期当天提醒你。单个物品也可以在它的详情页里添加。</p>
+
+    <div class="glabel">数据备份</div>
+    <div class="group actions">
+      <button type="button" id="btnExport">导出备份文件</button>
+      <button type="button" id="btnImport">从备份文件恢复</button>
+    </div>
+    <p class="foot" id="backupInfo"></p>
+
+    <div class="group actions">
+      <button type="button" id="btnClearDone">清理已用完的记录</button>
+      <button type="button" class="danger" id="btnClearAll">清空所有数据</button>
+    </div>
+
+    <div class="glabel">关于</div>
+    <div class="group about">
+      <p>数据只保存在这台设备上，不会上传到任何服务器。</p>
+      <p>安装：用 Safari 打开本页 →「分享」→「添加到主屏幕」。安装后从桌面图标打开，断网也能用。</p>
+    </div>
+    <p class="foot center">到期提醒 v1.0</p>
+  </div>
+</section>
+
+<input type="file" id="fileImport" class="vh" accept=".json,application/json" tabindex="-1">
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(() => {
+'use strict';
+
+const STORE_KEY = 'expiry-tracker:v1';
+const DAY = 86400000;
+const WEEK = '日一二三四五六';
+const CATS = [
+  { id: 'food', name: '食品', emoji: '🥛', remind: 3, tint: '255,149,0' },
+  { id: 'med', name: '药品', emoji: '💊', remind: 30, tint: '255,59,48' },
+  { id: 'beauty', name: '护肤美妆', emoji: '🧴', remind: 30, tint: '255,45,85' },
+  { id: 'daily', name: '日用品', emoji: '🧻', remind: 14, tint: '50,173,230' },
+  { id: 'doc', name: '证件合同', emoji: '🪪', remind: 90, tint: '88,86,214' },
+  { id: 'sub', name: '会员订阅', emoji: '💳', remind: 7, tint: '175,82,222' },
+  { id: 'ticket', name: '卡券', emoji: '🎟️', remind: 3, tint: '255,204,0' },
+  { id: 'other', name: '其他', emoji: '📦', remind: 7, tint: '142,142,147' },
+];
+const CAT = Object.fromEntries(CATS.map(c => [c.id, c]));
+const REMIND_OPTS = [[0, '只在当天'], [1, '提前 1 天'], [3, '提前 3 天'], [7, '提前 1 周'], [14, '提前 2 周'],
+  [30, '提前 1 个月'], [60, '提前 2 个月'], [90, '提前 3 个月'], [180, '提前半年']];
+const QUICK = [['3d', '3天后'], ['7d', '1周后'], ['1m', '1个月后'], ['3m', '3个月后'], ['6m', '半年后'], ['1y', '1年后']];
+const DEFAULT_LOCS = ['冰箱冷藏', '冰箱冷冻', '厨房', '药箱', '浴室', '卧室', '钱包'];
+const GROUPS = [['expired', '已过期'], ['soon', '即将到期'], ['ok', '正常'], ['done', '已用完']];
+
+const $ = (s, el = document) => el.querySelector(s);
+const $$ = (s, el = document) => Array.from(el.querySelectorAll(s));
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+const int = (v, def, min = 0) => { const n = parseInt(v, 10); return Number.isFinite(n) && n >= min ? n : def; };
+const uid = () => (window.crypto && crypto.randomUUID ? crypto.randomUUID()
+  : Date.now().toString(36) + Math.random().toString(36).slice(2, 10));
+
+// ---------- dates: all local, stored as 'YYYY-MM-DD' ----------
+const pad = n => String(n).padStart(2, '0');
+const fmtDate = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+const parseDate = s => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); };
+const isDate = s => typeof s === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s) && fmtDate(parseDate(s)) === s;
+const today0 = () => { const d = new Date(); d.setHours(0, 0, 0, 0); return d; };
+const addDays = (d, n) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + n);
+const addMonths = (d, n) => {
+  const first = new Date(d.getFullYear(), d.getMonth() + n, 1);
+  const last = new Date(first.getFullYear(), first.getMonth() + 1, 0).getDate();
+  return new Date(first.getFullYear(), first.getMonth(), Math.min(d.getDate(), last));
+};
+const diffDays = (a, b) => Math.round((b - a) / DAY);
+
+// The production day counts as day 1, so "3 days from Jan 1" lasts through Jan 3.
+function shelfExpiry(mfg, num, unit) {
+  if (!isDate(mfg) || !(num > 0)) return '';
+  const m = parseDate(mfg);
+  const end = unit === 'd' ? addDays(m, num) : addMonths(m, unit === 'y' ? num * 12 : num);
+  return fmtDate(addDays(end, -1));
+}
+function fmtCN(s, withYear) {
+  const d = parseDate(s);
+  const y = withYear || d.getFullYear() !== new Date().getFullYear() ? d.getFullYear() + '年' : '';
+  return `${y}${d.getMonth() + 1}月${d.getDate()}日`;
+}
+function human(days) {
+  if (days < 60) return days + ' 天';
+  if (days < 365) return Math.floor(days / 30) + ' 个月';
+  const y = Math.floor(days / 36.5) / 10;
+  return (Number.isInteger(y) ? y : y.toFixed(1)) + ' 年';
+}
+
+// ---------- data ----------
+function normalize(o) {
+  if (!o || typeof o !== 'object') return null;
+  const name = String(o.name == null ? '' : o.name).trim().slice(0, 60);
+  if (!name || !isDate(o.expiry)) return null;
+  const now = Date.now();
+  const shelf = o.mode === 'shelf' && isDate(o.mfg) && int(o.shelfNum, 0, 1) > 0;
+  return {
+    id: typeof o.id === 'string' && o.id ? o.id.slice(0, 64) : uid(),
+    name,
+    cat: CAT[o.cat] ? o.cat : 'other',
+    mode: shelf ? 'shelf' : 'date',
+    expiry: o.expiry,
+    mfg: shelf ? o.mfg : '',
+    shelfNum: shelf ? int(o.shelfNum, 0, 1) : null,
+    shelfUnit: ['d', 'm', 'y'].includes(o.shelfUnit) ? o.shelfUnit : 'm',
+    remind: Math.min(int(o.remind, 7), 3650),
+    qty: Math.min(int(o.qty, 1), 9999),
+    loc: String(o.loc || '').trim().slice(0, 30),
+    note: String(o.note || '').slice(0, 1000),
+    done: !!o.done,
+    doneAt: o.done ? int(o.doneAt, now, 1) : null,
+    createdAt: int(o.createdAt, now, 1),
+    updatedAt: int(o.updatedAt, now, 1),
+  };
+}
+function load() {
+  let raw = null;
+  try { raw = localStorage.getItem(STORE_KEY); } catch (e) { /* storage disabled */ }
+  if (raw) {
+    try {
+      const d = JSON.parse(raw);
+      return {
+        items: (Array.isArray(d.items) ? d.items : []).map(normalize).filter(Boolean),
+        settings: d.settings && typeof d.settings === 'object' ? d.settings : {},
+      };
+    } catch (e) {
+      try { localStorage.setItem(STORE_KEY + ':broken:' + Date.now(), raw); } catch (_) { /* ignore */ }
+    }
+  }
+  return { items: [], settings: {} };
+}
+function save() {
+  try {
+    localStorage.setItem(STORE_KEY, JSON.stringify({ version: 1, items: state.items, settings: state.settings }));
+    return true;
+  } catch (e) {
+    toast('保存失败：存储空间不足或被禁用');
+    return false;
+  }
+}
+let persistAsked = false;
+function requestPersist() {
+  if (persistAsked || !navigator.storage || !navigator.storage.persist) return;
+  persistAsked = true;
+  navigator.storage.persist().catch(() => {});
+}
+
+let state = load();
+const ui = { filter: 'all', cat: 'all', q: '' };
+const form = { id: null, cat: 'food', mode: 'date', remindTouched: false };
+
+// ---------- status ----------
+function statusOf(it, t0) {
+  if (it.done) return { key: 'done', days: 0 };
+  const days = diffDays(t0, parseDate(it.expiry));
+  return { key: days < 0 ? 'expired' : days <= it.remind ? 'soon' : 'ok', days };
+}
+function pillText(st) {
+  const d = st.days;
+  if (st.key === 'done') return '已用完';
+  if (d < 0) return '过期 ' + human(-d);
+  if (d === 0) return '今天到期';
+  if (d === 1) return '明天到期';
+  return st.key === 'soon' ? human(d) + '后到期' : '还剩 ' + human(d);
+}
+function progress(it, t0) {
+  const s = it.mode === 'shelf' ? parseDate(it.mfg) : new Date(it.createdAt);
+  const start = new Date(s.getFullYear(), s.getMonth(), s.getDate());
+  const total = parseDate(it.expiry) - start;
+  return total > 0 ? Math.min(1, Math.max(0, (t0 - start) / total)) : 1;
+}
+
+// ---------- main list ----------
+let chipsKey = null;
+function render() {
+  const t0 = today0();
+  $('#today').textContent = `${t0.getMonth() + 1}月${t0.getDate()}日 星期${WEEK[t0.getDay()]}`;
+  const has = state.items.length > 0;
+  $('#dash').hidden = !has;
+
+  const used = new Set(state.items.map(x => x.cat));
+  if (ui.cat !== 'all' && !used.has(ui.cat)) ui.cat = 'all';
+  const cats = CATS.filter(c => used.has(c.id));
+  const key = cats.map(c => c.id).join();
+  if (key !== chipsKey) {
+    chipsKey = key;
+    $('#chips').innerHTML = '<button type="button" class="chip" data-cat="all">全部</button>' +
+      cats.map(c => `<button type="button" class="chip" data-cat="${c.id}">${c.emoji} ${c.name}</button>`).join('');
+  }
+  $('#chips').hidden = cats.length < 2;
+  $$('.chip').forEach(b => b.classList.toggle('on', b.dataset.cat === ui.cat));
+
+  const rows = state.items.filter(it => ui.cat === 'all' || it.cat === ui.cat).map(it => ({ it, st: statusOf(it, t0) }));
+  const count = { expired: 0, soon: 0, all: 0, done: 0 };
+  for (const { st } of rows) {
+    if (st.key === 'done') count.done++;
+    else { count.all++; if (st.key !== 'ok') count[st.key]++; }
+  }
+  $$('.stat').forEach(b => {
+    b.classList.toggle('on', b.dataset.f === ui.filter);
+    $('b', b).textContent = count[b.dataset.f];
+  });
+
+  const q = ui.q.trim().toLowerCase();
+  const shown = rows.filter(({ it, st }) => {
+    if (ui.filter === 'done' ? st.key !== 'done' : st.key === 'done') return false;
+    if ((ui.filter === 'expired' || ui.filter === 'soon') && st.key !== ui.filter) return false;
+    return !q || [it.name, it.loc, it.note, CAT[it.cat].name].join(' ').toLowerCase().includes(q);
+  });
+  shown.sort(ui.filter === 'done'
+    ? (a, b) => b.it.doneAt - a.it.doneAt
+    : (a, b) => a.it.expiry.localeCompare(b.it.expiry) || a.it.name.localeCompare(b.it.name, 'zh-CN'));
+
+  let html = '';
+  if (!has) {
+    html = '<div class="empty"><div class="big">🗓️</div><h3>还没有记录</h3>' +
+      '<p>点右下角的 ＋ 记下第一样东西<br>快到期时这里会提醒你</p>' +
+      '<button type="button" data-act="sample">先看看示例</button></div>';
+  } else if (!shown.length) {
+    const msg = q ? `没有找到“${esc(ui.q.trim())}”`
+      : { expired: '没有过期的东西 👍', soon: '最近没有快到期的东西', done: '还没有标记为用完的东西', all: '这里还没有东西' }[ui.filter];
+    html = `<div class="empty small"><p>${msg}</p></div>`;
+  } else {
+    for (const [k, label] of GROUPS) {
+      const g = shown.filter(x => x.st.key === k);
+      if (g.length) {
+        html += `<h3 class="sec-h sh-${k}"><span>${label}</span><span>${g.length}</span></h3>` +
+          `<div class="card">${g.map(x => itemHTML(x, t0)).join('')}</div>`;
+      }
+    }
+  }
+  $('#list').innerHTML = html;
+}
+function itemHTML({ it, st }, t0) {
+  const c = CAT[it.cat];
+  const meta = [it.done ? fmtCN(fmtDate(new Date(it.doneAt))) + '用完' : fmtCN(it.expiry) + '到期'];
+  if (it.loc) meta.push(it.loc);
+  const bar = it.done ? ''
+    : `<span class="bar"><i style="width:${Math.max(3, Math.round(progress(it, t0) * 100))}%"></i></span>`;
+  return `<button type="button" class="item st-${st.key}" data-id="${esc(it.id)}">` +
+    `<span class="ico" style="--t:${c.tint}">${c.emoji}</span>` +
+    `<span class="main"><span class="name">${esc(it.name)}${it.qty > 1 ? `<span class="qty">×${it.qty}</span>` : ''}</span>` +
+    `<span class="meta">${esc(meta.join(' · '))}</span>${bar}</span>` +
+    `<span class="pill">${pillText(st)}</span></button>`;
+}
+
+// ---------- sheets ----------
+let current = null;
+function openSheet(el) {
+  if (current && current !== el) current.classList.remove('show');
+  current = el;
+  $('.sheet-body', el).scrollTop = 0;
+  el.classList.add('show');
+  $('#backdrop').classList.add('show');
+  document.documentElement.classList.add('locked');
+}
+function closeSheet() {
+  if (!current) return;
+  if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+  current.classList.remove('show');
+  current = null;
+  $('#backdrop').classList.remove('show');
+  document.documentElement.classList.remove('locked');
+}
+
+// ---------- edit form ----------
+const F = {
+  name: $('#fName'), expiry: $('#fExpiry'), mfg: $('#fMfg'), shelfNum: $('#fShelfNum'), shelfUnit: $('#fShelfUnit'),
+  remind: $('#fRemind'), qty: $('#fQty'), loc: $('#fLoc'), note: $('#fNote'),
+};
+
+function setCat(id) {
+  form.cat = id;
+  $$('.cat-opt').forEach(b => b.classList.toggle('on', b.dataset.cat === id));
+  if (!form.remindTouched) setRemind(CAT[id].remind);
+}
+function setRemind(v) {
+  v = String(v);
+  if (!Array.from(F.remind.options).some(o => o.value === v)) {
+    F.remind.append(new Option(`提前 ${v} 天`, v));
+  }
+  F.remind.value = v;
+}
+function setMode(m) {
+  form.mode = m;
+  $$('#fMode button').forEach(b => b.classList.toggle('on', b.dataset.mode === m));
+  $('#modeDate').hidden = m !== 'date';
+  $('#modeShelf').hidden = m !== 'shelf';
+  updateCalc();
+}
+function setRel(el, s) {
+  if (!s) { el.textContent = ''; el.className = ''; return; }
+  const d = diffDays(today0(), parseDate(s));
+  el.textContent = d < 0 ? '已过期 ' + human(-d) : d === 0 ? '就是今天' : '还剩 ' + human(d);
+  el.className = d < 0 ? 'c-red' : d === 0 ? 'c-orange' : '';
+}
+function updateCalc() {
+  $$('.date-field').forEach(w => w.classList.toggle('has', !!$('input', w).value));
+  setRel($('#relDate'), isDate(F.expiry.value) ? F.expiry.value : '');
+  const e = shelfExpiry(F.mfg.value, int(F.shelfNum.value, 0, 1), F.shelfUnit.value);
+  $('#calcExpiry').textContent = e ? fmtCN(e, true) : '—';
+  setRel($('#relShelf'), e);
+  $$('#locChips button').forEach(b => b.classList.toggle('on', b.dataset.loc === F.loc.value.trim()));
+}
+function renderLocChips() {
+  const freq = new Map();
+  for (const it of state.items) if (it.loc) freq.set(it.loc, (freq.get(it.loc) || 0) + 1);
+  const used = Array.from(freq.entries()).sort((a, b) => b[1] - a[1]).map(x => x[0]);
+  $('#locChips').innerHTML = Array.from(new Set([...used, ...DEFAULT_LOCS])).slice(0, 8)
+    .map(l => `<button type="button" data-loc="${esc(l)}">${esc(l)}</button>`).join('');
+}
+
+function openEdit(id, tpl) {
+  const it = id ? state.items.find(x => x.id === id) : null;
+  const src = it || tpl || null;
+  form.id = it ? it.id : null;
+  form.remindTouched = !!src;
+  $('#editTitle').textContent = it ? '编辑' : '添加物品';
+  F.name.value = src ? src.name : '';
+  setCat(src ? src.cat : ui.cat !== 'all' ? ui.cat : state.settings.lastCat || 'food');
+  setRemind(src ? src.remind : CAT[form.cat].remind);
+  F.expiry.value = it ? it.expiry : '';
+  F.mfg.value = it ? it.mfg : '';
+  F.shelfNum.value = src && src.shelfNum ? src.shelfNum : '';
+  F.shelfUnit.value = src ? src.shelfUnit : 'm';
+  F.qty.value = src ? src.qty : 1;
+  F.loc.value = src ? src.loc : '';
+  F.note.value = src ? src.note : '';
+  renderLocChips();
+  setMode(src ? src.mode : state.settings.lastMode || 'date');
+  $('#editActions').hidden = !it;
+  if (it) {
+    $('#btnCal').hidden = it.done;
+    $('#btnDone').textContent = it.done ? '恢复为未用完' : '标记为已用完';
+  }
+  openSheet($('#editSheet'));
+}
+
+function commitForm() {
+  const name = F.name.value.trim();
+  if (!name) { toast('请填写名称'); return null; }
+  let expiry, mfg = '', shelfNum = null;
+  if (form.mode === 'shelf') {
+    mfg = F.mfg.value;
+    shelfNum = int(F.shelfNum.value, 0, 1);
+    expiry = shelfExpiry(mfg, shelfNum, F.shelfUnit.value);
+    if (!expiry) { toast(isDate(mfg) ? '请填写保质期' : '请选择生产日期'); return null; }
+  } else {
+    expiry = F.expiry.value;
+    if (!isDate(expiry)) { toast('请选择到期日期'); return null; }
+  }
+  const now = Date.now();
+  const old = form.id ? state.items.find(x => x.id === form.id) : null;
+  const item = normalize({
+    id: old ? old.id : uid(),
+    createdAt: old ? old.createdAt : now,
+    done: old ? old.done : false,
+    doneAt: old ? old.doneAt : null,
+    name, cat: form.cat, mode: form.mode, expiry, mfg, shelfNum, shelfUnit: F.shelfUnit.value,
+    remind: F.remind.value, qty: F.qty.value, loc: F.loc.value, note: F.note.value,
+    updatedAt: now,
+  });
+  if (old) Object.assign(old, item); else state.items.push(item);
+  state.settings.lastCat = form.cat;
+  state.settings.lastMode = form.mode;
+  if (!save()) return null;
+  form.id = item.id;
+  render();
+  requestPersist();
+  return old || item;
+}
+
+function toggleDone(id) {
+  const it = state.items.find(x => x.id === id);
+  if (!it) return;
+  const prev = { done: it.done, doneAt: it.doneAt, updatedAt: it.updatedAt };
+  it.done = !it.done;
+  it.doneAt = it.done ? Date.now() : null;
+  it.updatedAt = Date.now();
+  save(); closeSheet(); render();
+  toast(it.done ? `「${it.name}」已用完` : `已恢复「${it.name}」`, '撤销', () => { Object.assign(it, prev); save(); render(); });
+}
+function deleteItem(id) {
+  const i = state.items.findIndex(x => x.id === id);
+  if (i < 0) return;
+  const [gone] = state.items.splice(i, 1);
+  save(); closeSheet(); render();
+  toast(`已删除「${gone.name}」`, '撤销', () => { state.items.splice(Math.min(i, state.items.length), 0, gone); save(); render(); });
+}
+
+function loadSamples() {
+  const t = today0(), now = Date.now();
+  const d = n => fmtDate(addDays(t, n));
+  const ago = n => now - n * DAY;
+  const mfg = d(-400);
+  const list = [
+    { name: '鲜牛奶', cat: 'food', expiry: d(2), remind: 3, qty: 2, loc: '冰箱冷藏', createdAt: ago(5) },
+    { name: '酸奶', cat: 'food', expiry: d(-1), remind: 3, qty: 4, loc: '冰箱冷藏', createdAt: ago(12) },
+    { name: '鸡蛋', cat: 'food', expiry: d(16), remind: 3, qty: 10, loc: '冰箱冷藏', createdAt: ago(4) },
+    { name: '布洛芬缓释胶囊', cat: 'med', mode: 'shelf', mfg, shelfNum: 24, shelfUnit: 'm', expiry: shelfExpiry(mfg, 24, 'm'), remind: 30, loc: '药箱', createdAt: ago(90) },
+    { name: '维生素 C 片', cat: 'med', expiry: d(-6), remind: 30, loc: '药箱', createdAt: ago(300) },
+    { name: '保湿面霜', cat: 'beauty', expiry: d(150), remind: 30, loc: '浴室', note: '开封后 12 个月内用完', createdAt: ago(60) },
+    { name: '护照', cat: 'doc', expiry: d(430), remind: 180, loc: '卧室抽屉', note: '到期前半年办理换发', createdAt: ago(200) },
+    { name: '视频会员', cat: 'sub', expiry: d(5), remind: 7, note: '不续的话记得关自动续费', createdAt: ago(25) },
+    { name: '咖啡优惠券', cat: 'ticket', expiry: d(3), remind: 3, qty: 3, createdAt: ago(4) },
+  ];
+  state.items.push(...list.map(o => normalize({ ...o, updatedAt: now })));
+  save(); render();
+  toast('已载入示例，可在「设置」里清空');
+}
+
+// ---------- calendar (.ics) & files ----------
+const icsEsc = s => String(s).replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\r?\n/g, '\\n');
+function icsFold(line) {
+  const enc = new TextEncoder();
+  let out = '', len = 0;
+  for (const ch of line) {
+    const n = enc.encode(ch).length;
+    if (len + n > 75) { out += '\r\n '; len = 1; }
+    out += ch;
+    len += n;
+  }
+  return out;
+}
+function buildICS(items) {
+  const t0 = today0();
+  const stamp = new Date().toISOString().replace(/[-:]/g, '').replace(/\.\d+/, '');
+  const L = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Expiry Tracker//ZH', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH'];
+  for (const it of items) {
+    const c = CAT[it.cat];
+    // Never schedule the advance alert in the past: clamp it to tomorrow at the earliest.
+    const adv = Math.min(it.remind, diffDays(t0, parseDate(it.expiry)) - 1);
+    const desc = [`分类：${c.name}`, it.qty > 1 && `数量：${it.qty}`, it.loc && `位置：${it.loc}`, it.note && `备注：${it.note}`]
+      .filter(Boolean).join('\n');
+    L.push('BEGIN:VEVENT',
+      `UID:${it.id}@expiry-tracker`,
+      `DTSTAMP:${stamp}`,
+      `DTSTART;VALUE=DATE:${it.expiry.replace(/-/g, '')}`,
+      `DTEND;VALUE=DATE:${fmtDate(addDays(parseDate(it.expiry), 1)).replace(/-/g, '')}`,
+      `SUMMARY:${icsEsc(`${c.emoji} ${it.name} 到期`)}`,
+      `DESCRIPTION:${icsEsc(desc)}`,
+      'TRANSP:TRANSPARENT');
+    // Triggers are relative to 00:00 of the all-day event: "-P{N-1}DT15H" = N days before at 09:00.
+    if (adv > 0) {
+      L.push('BEGIN:VALARM', 'ACTION:DISPLAY', `DESCRIPTION:${icsEsc(`${it.name} 还有 ${adv} 天到期`)}`,
+        `TRIGGER:-P${adv > 1 ? adv - 1 + 'D' : ''}T15H`, 'END:VALARM');
+    }
+    L.push('BEGIN:VALARM', 'ACTION:DISPLAY', `DESCRIPTION:${icsEsc(`${it.name} 今天到期`)}`, 'TRIGGER:PT9H', 'END:VALARM',
+      'END:VEVENT');
+  }
+  L.push('END:VCALENDAR');
+  return L.map(icsFold).join('\r\n') + '\r\n';
+}
+const safeName = s => s.replace(/[\\/:*?"<>|]/g, '_').slice(0, 40);
+const isStandalone = () => navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches;
+
+// Home-screen web apps on iOS can't reliably download files, so hand the file to the share sheet there.
+async function deliver(name, type, text) {
+  const blob = new Blob([text], { type });
+  if (isStandalone() && navigator.canShare) {
+    const file = new File([blob], name, { type });
+    if (navigator.canShare({ files: [file] })) {
+      try { await navigator.share({ files: [file] }); return true; }
+      catch (e) { if (e.name === 'AbortError') return false; }
+    }
+  }
+  const url = URL.createObjectURL(blob);
+  const a = Object.assign(document.createElement('a'), { href: url, download: name });
+  document.body.append(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 30000);
+  return true;
+}
+function exportCalendar(items, name) {
+  deliver(name, 'text/calendar', buildICS(items));
+  toast(isStandalone() ? '在分享菜单里选「存储到文件」，再从「文件」打开即可添加' : '已生成日历文件，按提示添加到日历');
+}
+async function exportBackup() {
+  const data = { app: 'expiry-tracker', version: 1, exportedAt: new Date().toISOString(), items: state.items };
+  if (await deliver(`到期提醒备份-${fmtDate(new Date())}.json`, 'application/json', JSON.stringify(data, null, 2))) {
+    state.settings.lastBackup = Date.now();
+    save();
+    renderBackupInfo();
+  }
+}
+async function importBackup(file) {
+  let list;
+  try {
+    const d = JSON.parse(await file.text());
+    list = (Array.isArray(d) ? d : d.items || []).map(normalize).filter(Boolean);
+  } catch (e) { list = []; }
+  if (!list.length) { toast('无法读取：请选择本 App 导出的备份文件'); return; }
+  let added = 0, updated = 0;
+  for (const it of list) {
+    const i = state.items.findIndex(x => x.id === it.id);
+    if (i < 0) { state.items.push(it); added++; }
+    else if (it.updatedAt >= state.items[i].updatedAt) { state.items[i] = it; updated++; }
+  }
+  save(); render();
+  toast(`已恢复：新增 ${added} 条` + (updated ? `，更新 ${updated} 条` : ''));
+}
+function renderBackupInfo() {
+  const lb = state.settings.lastBackup;
+  $('#backupInfo').textContent = (lb ? `上次导出：${fmtCN(fmtDate(new Date(lb)), true)}。` : '还没有备份过。') +
+    '数据只存在这台设备上，删掉主屏幕图标或换手机都会丢失，建议定期导出备份到「文件」或 iCloud 云盘。';
+}
+
+// ---------- toast ----------
+let toastTimer = 0;
+function toast(msg, actLabel, act) {
+  const t = $('#toast');
+  const span = document.createElement('span');
+  span.textContent = msg;
+  t.replaceChildren(span);
+  if (actLabel) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.textContent = actLabel;
+    b.addEventListener('click', () => { hideToast(); act(); });
+    t.append(b);
+  }
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(hideToast, actLabel ? 5000 : 2600);
+}
+function hideToast() { $('#toast').classList.remove('show'); }
+
+// ---------- install tip ----------
+function initTip() {
+  const ua = navigator.userAgent;
+  const isIOS = /iPhone|iPad|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  if (!isIOS || isStandalone() || state.settings.tipClosed) return;
+  $('#tipText').innerHTML = /MicroMessenger/i.test(ua)
+    ? '📲 <b>请先在 Safari 中打开</b>：点右上角「⋯」→「在默认浏览器中打开」，再添加到主屏幕。'
+    : '📲 <b>添加到主屏幕</b>，像 App 一样使用：点 Safari 的「分享」按钮（新版 iOS 在「⋯」菜单里）→「添加到主屏幕」。<br>之后请从桌面图标打开再记录，Safari 里的数据和主屏幕 App 不互通。';
+  $('#tip').hidden = false;
+  $('#tipClose').addEventListener('click', () => { $('#tip').hidden = true; state.settings.tipClosed = true; save(); });
+}
+
+// ---------- wiring ----------
+$('#fCats').innerHTML = CATS.map(c =>
+  `<button type="button" class="cat-opt" data-cat="${c.id}"><span class="e">${c.emoji}</span>${c.name}</button>`).join('');
+F.remind.innerHTML = REMIND_OPTS.map(([v, l]) => `<option value="${v}">${l}</option>`).join('');
+$('#quick').innerHTML = QUICK.map(([k, l]) => `<button type="button" data-add="${k}">${l}</button>`).join('');
+
+$('.stats').addEventListener('click', e => {
+  const b = e.target.closest('.stat');
+  if (!b) return;
+  ui.filter = ui.filter === b.dataset.f ? 'all' : b.dataset.f;
+  render();
+});
+$('#chips').addEventListener('click', e => {
+  const b = e.target.closest('.chip');
+  if (b) { ui.cat = b.dataset.cat; render(); }
+});
+$('#q').addEventListener('input', e => { ui.q = e.target.value; render(); });
+$('#list').addEventListener('click', e => {
+  const item = e.target.closest('.item');
+  if (item) openEdit(item.dataset.id);
+  else if (e.target.closest('[data-act="sample"]')) loadSamples();
+});
+$('#fab').addEventListener('click', () => openEdit(null));
+$('#btnSettings').addEventListener('click', () => { renderBackupInfo(); openSheet($('#setSheet')); });
+$('#backdrop').addEventListener('click', closeSheet);
+$$('[data-close]').forEach(b => b.addEventListener('click', closeSheet));
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeSheet(); });
+
+$('#fCats').addEventListener('click', e => {
+  const b = e.target.closest('.cat-opt');
+  if (b) setCat(b.dataset.cat);
+});
+$('#fMode').addEventListener('click', e => {
+  const b = e.target.closest('[data-mode]');
+  if (!b) return;
+  if (b.dataset.mode === 'date' && form.mode === 'shelf' && !F.expiry.value) {
+    F.expiry.value = shelfExpiry(F.mfg.value, int(F.shelfNum.value, 0, 1), F.shelfUnit.value);
+  }
+  setMode(b.dataset.mode);
+});
+$('#quick').addEventListener('click', e => {
+  const b = e.target.closest('[data-add]');
+  if (!b) return;
+  const k = b.dataset.add, n = parseInt(k, 10), unit = k.slice(-1);
+  F.expiry.value = fmtDate(unit === 'd' ? addDays(today0(), n) : addMonths(today0(), unit === 'y' ? n * 12 : n));
+  updateCalc();
+});
+$('#locChips').addEventListener('click', e => {
+  const b = e.target.closest('[data-loc]');
+  if (!b) return;
+  F.loc.value = F.loc.value.trim() === b.dataset.loc ? '' : b.dataset.loc;
+  updateCalc();
+});
+$$('.stepper button').forEach(b => b.addEventListener('click', () => {
+  F.qty.value = Math.min(9999, Math.max(0, int(F.qty.value, 1) + Number(b.dataset.step)));
+}));
+F.remind.addEventListener('change', () => { form.remindTouched = true; });
+[F.expiry, F.mfg, F.shelfNum, F.shelfUnit, F.loc].forEach(el => {
+  el.addEventListener('input', updateCalc);
+  el.addEventListener('change', updateCalc);
+});
+[F.name, F.loc].forEach(el => el.addEventListener('keydown', e => { if (e.key === 'Enter') e.target.blur(); }));
+
+$('#btnSave').addEventListener('click', () => {
+  const isNew = !form.id;
+  const it = commitForm();
+  if (it) { closeSheet(); toast(isNew ? `已添加「${it.name}」` : '已保存'); }
+});
+$('#btnCal').addEventListener('click', () => {
+  const it = commitForm();
+  if (!it) return;
+  if (diffDays(today0(), parseDate(it.expiry)) < 0) { toast('已经过期了，不用再加提醒'); return; }
+  exportCalendar([it], `${safeName(it.name)}-到期提醒.ics`);
+  closeSheet();
+});
+$('#btnDup').addEventListener('click', () => {
+  const it = state.items.find(x => x.id === form.id);
+  if (!it) return;
+  openEdit(null, it);
+  toast('已复制，填上新的到期日期后保存');
+});
+$('#btnDone').addEventListener('click', () => toggleDone(form.id));
+$('#btnDel').addEventListener('click', () => deleteItem(form.id));
+
+$('#btnCalAll').addEventListener('click', () => {
+  const t0 = today0();
+  const list = state.items.filter(x => !x.done && diffDays(t0, parseDate(x.expiry)) >= 0);
+  if (!list.length) { toast('没有未到期的物品'); return; }
+  exportCalendar(list, '到期提醒-全部.ics');
+});
+$('#btnExport').addEventListener('click', exportBackup);
+$('#btnImport').addEventListener('click', () => $('#fileImport').click());
+$('#fileImport').addEventListener('change', e => {
+  const file = e.target.files && e.target.files[0];
+  e.target.value = '';
+  if (file) importBackup(file);
+});
+$('#btnClearDone').addEventListener('click', () => {
+  const n = state.items.filter(x => x.done).length;
+  if (!n) { toast('没有已用完的记录'); return; }
+  if (!confirm(`删除 ${n} 条已用完的记录？`)) return;
+  state.items = state.items.filter(x => !x.done);
+  save(); render();
+  toast(`已清理 ${n} 条`);
+});
+$('#btnClearAll').addEventListener('click', () => {
+  if (!state.items.length) { toast('现在没有数据'); return; }
+  if (!confirm(`确定清空全部 ${state.items.length} 条记录？此操作无法撤销，建议先导出备份。`)) return;
+  state.items = [];
+  save(); closeSheet(); render();
+  toast('已清空');
+});
+
+document.addEventListener('visibilitychange', () => { if (!document.hidden) render(); });
+window.addEventListener('storage', e => { if (e.key === STORE_KEY) { state = load(); render(); } });
+(function tickAtMidnight() {
+  const now = new Date();
+  setTimeout(() => { render(); tickAtMidnight(); }, new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 5) - now);
+})();
+
+render();
+initTip();
+if ('serviceWorker' in navigator && (location.protocol === 'https:' || ['localhost', '127.0.0.1'].includes(location.hostname))) {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+})();
+</script>
+</body>
+</html>
