@@ -1,5 +1,5 @@
 // Bump the version whenever index.html changes so old caches get dropped.
-const CACHE = 'expiry-tracker-v1';
+const CACHE = 'expiry-tracker-v2';
 const ASSETS = ['./', './index.html', './manifest.webmanifest', './icon-180.png', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', e => {

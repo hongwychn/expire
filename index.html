@@ -81,7 +81,7 @@ body {
   margin: 0;
   background: var(--bg);
   color: var(--text);
-  font: 17px/1.35 -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", "Noto Sans CJK SC", "Microsoft YaHei", sans-serif;
+  font: 17px/1.35 -apple-system, BlinkMacSystemFont, "PingFang SC", "HarmonyOS Sans SC", "Helvetica Neue", "Noto Sans CJK SC", "Microsoft YaHei", sans-serif;
   -webkit-font-smoothing: antialiased;
 }
 button { font: inherit; color: inherit; background: none; border: 0; margin: 0; padding: 0; cursor: pointer; touch-action: manipulation; -webkit-user-select: none; user-select: none; }
@@ -332,7 +332,7 @@ input[type="date"].pick { min-width: 9.6em; padding: 5px 11px; background-image:
     </div>
 
     <div class="group actions" id="editActions">
-      <button type="button" id="btnCal">添加到 iPhone 日历提醒</button>
+      <button type="button" id="btnCal">添加到手机日历提醒</button>
       <button type="button" id="btnDup">再记一份（复制）</button>
       <button type="button" id="btnDone">标记为已用完</button>
       <button type="button" class="danger" id="btnDel">删除</button>
@@ -351,7 +351,7 @@ input[type="date"].pick { min-width: 9.6em; padding: 5px 11px; background-image:
     <div class="group actions">
       <button type="button" id="btnCalAll">把所有未到期的物品导出到日历</button>
     </div>
-    <p class="foot">网页 App 不能在后台推送通知。导出到 iPhone 自带的「日历」后，系统会在你设置的提醒日（上午 9:00）和到期当天提醒你。单个物品也可以在它的详情页里添加。</p>
+    <p class="foot">网页 App 不能在后台推送通知。导出到手机自带的「日历」后，系统会在你设置的提醒日（上午 9:00）和到期当天提醒你。单个物品也可以在它的详情页里添加。</p>
 
     <div class="glabel">数据备份</div>
     <div class="group actions">
@@ -368,9 +368,9 @@ input[type="date"].pick { min-width: 9.6em; padding: 5px 11px; background-image:
     <div class="glabel">关于</div>
     <div class="group about">
       <p>数据只保存在这台设备上，不会上传到任何服务器。</p>
-      <p>安装：用 Safari 打开本页 →「分享」→「添加到主屏幕」。安装后从桌面图标打开，断网也能用。</p>
+      <p id="aboutInstall"></p>
     </div>
-    <p class="foot center">到期提醒 v1.0</p>
+    <p class="foot center">到期提醒 v1.1</p>
   </div>
 </section>
 
@@ -407,6 +407,12 @@ const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;'
 const int = (v, def, min = 0) => { const n = parseInt(v, 10); return Number.isFinite(n) && n >= min ? n : def; };
 const uid = () => (window.crypto && crypto.randomUUID ? crypto.randomUUID()
   : Date.now().toString(36) + Math.random().toString(36).slice(2, 10));
+
+const UA = navigator.userAgent;
+const IS_IOS = /iPhone|iPad|iPod/.test(UA) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+const IS_HUAWEI = /OpenHarmony|HarmonyOS|ArkWeb|HuaweiBrowser/i.test(UA);
+const IS_MOBILE = IS_IOS || IS_HUAWEI || /Android|Mobile/i.test(UA);
+const IS_WECHAT = /MicroMessenger/i.test(UA);
 
 // ---------- dates: all local, stored as 'YYYY-MM-DD' ----------
 const pad = n => String(n).padStart(2, '0');
@@ -811,7 +817,7 @@ const isStandalone = () => navigator.standalone === true || window.matchMedia('(
 // Home-screen web apps on iOS can't reliably download files, so hand the file to the share sheet there.
 async function deliver(name, type, text) {
   const blob = new Blob([text], { type });
-  if (isStandalone() && navigator.canShare) {
+  if (IS_IOS && isStandalone() && navigator.canShare) {
     const file = new File([blob], name, { type });
     if (navigator.canShare({ files: [file] })) {
       try { await navigator.share({ files: [file] }); return true; }
@@ -828,7 +834,8 @@ async function deliver(name, type, text) {
 }
 function exportCalendar(items, name) {
   deliver(name, 'text/calendar', buildICS(items));
-  toast(isStandalone() ? '在分享菜单里选「存储到文件」，再从「文件」打开即可添加' : '已生成日历文件，按提示添加到日历');
+  toast(!IS_IOS ? '日历文件已下载，打开它并选择「日历」即可导入'
+    : isStandalone() ? '在分享菜单里选「存储到文件」，再从「文件」打开即可添加' : '已生成日历文件，按提示添加到日历');
 }
 async function exportBackup() {
   const data = { app: 'expiry-tracker', version: 1, exportedAt: new Date().toISOString(), items: state.items };
@@ -857,7 +864,8 @@ async function importBackup(file) {
 function renderBackupInfo() {
   const lb = state.settings.lastBackup;
   $('#backupInfo').textContent = (lb ? `上次导出：${fmtCN(fmtDate(new Date(lb)), true)}。` : '还没有备份过。') +
-    '数据只存在这台设备上，删掉主屏幕图标或换手机都会丢失，建议定期导出备份到「文件」或 iCloud 云盘。';
+    '数据只存在这台设备上，删掉桌面图标、清除浏览器数据或换手机都可能丢失，建议定期导出备份到' +
+    (IS_IOS ? '「文件」或 iCloud 云盘。' : '「文件管理」或云盘。');
 }
 
 // ---------- toast ----------
@@ -882,12 +890,19 @@ function hideToast() { $('#toast').classList.remove('show'); }
 
 // ---------- install tip ----------
 function initTip() {
-  const ua = navigator.userAgent;
-  const isIOS = /iPhone|iPad|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-  if (!isIOS || isStandalone() || state.settings.tipClosed) return;
-  $('#tipText').innerHTML = /MicroMessenger/i.test(ua)
-    ? '📲 <b>请先在 Safari 中打开</b>：点右上角「⋯」→「在默认浏览器中打开」，再添加到主屏幕。'
-    : '📲 <b>添加到主屏幕</b>，像 App 一样使用：点 Safari 的「分享」按钮（新版 iOS 在「⋯」菜单里）→「添加到主屏幕」。<br>之后请从桌面图标打开再记录，Safari 里的数据和主屏幕 App 不互通。';
+  $('#aboutInstall').textContent = IS_IOS
+    ? '安装：用 Safari 打开本页 →「分享」→「添加到主屏幕」。安装后从桌面图标打开，断网也能用。'
+    : '安装：用手机浏览器打开本页 → 菜单 →「添加到桌面」（华为浏览器在底部的「⋯」或「≡」菜单里）。之后从桌面图标打开，断网也能用。';
+  if (!IS_MOBILE || isStandalone() || state.settings.tipClosed) return;
+  $('#tipText').innerHTML = IS_WECHAT
+    ? (IS_IOS
+      ? '📲 <b>请先在 Safari 中打开</b>：点右上角「⋯」，选择在 Safari（默认浏览器）中打开，再添加到主屏幕。'
+      : '📲 <b>请先在浏览器中打开</b>：点右上角「⋯」→「在浏览器打开」，再添加到桌面。')
+    : IS_IOS
+      ? '📲 <b>添加到主屏幕</b>，像 App 一样使用：点 Safari 的「分享」按钮（新版 iOS 在「⋯」菜单里）→「添加到主屏幕」。<br>之后请从桌面图标打开再记录，Safari 里的数据和主屏幕 App 不互通。'
+      : IS_HUAWEI
+        ? '📲 <b>添加到桌面</b>，像 App 一样使用：打开华为浏览器的菜单（底部的「⋯」或「≡」）→「添加到桌面」，不同版本叫法略有不同。之后从桌面图标打开即可。'
+        : '📲 <b>添加到桌面</b>，像 App 一样使用：在浏览器菜单里选「添加到主屏幕」或「添加到桌面」。';
   $('#tip').hidden = false;
   $('#tipClose').addEventListener('click', () => { $('#tip').hidden = true; state.settings.tipClosed = true; save(); });
 }
@@ -919,6 +934,8 @@ $('#btnSettings').addEventListener('click', () => { renderBackupInfo(); openShee
 $('#backdrop').addEventListener('click', closeSheet);
 $$('[data-close]').forEach(b => b.addEventListener('click', closeSheet));
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeSheet(); });
+// iOS Safari only applies :active styles when some touchstart listener exists.
+document.addEventListener('touchstart', () => {}, { passive: true });
 
 $('#fCats').addEventListener('click', e => {
   const b = e.target.closest('.cat-opt');
